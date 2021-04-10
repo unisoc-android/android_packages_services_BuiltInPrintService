@@ -53,6 +53,7 @@ public class P2pPermissionManager {
     private final Context mContext;
     private final SharedPreferences mPrefs;
     private final NotificationManager mNotificationManager;
+    private AlertDialog mExplainDialog;
 
     public P2pPermissionManager(Context context) {
         mContext = context;
@@ -165,10 +166,18 @@ public class P2pPermissionManager {
             }
         };
 
-        new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
+        mExplainDialog = new AlertDialog.Builder(activity, android.R.style.Theme_DeviceDefault_Light_Dialog_Alert)
                 .setMessage(mContext.getString(R.string.wifi_direct_permission_rationale))
                 .setPositiveButton(R.string.fix, clickListener)
-                .show();
+                .create();
+        mExplainDialog.show();
+    }
+
+    public void dismissExplainDialog() {
+        if (mExplainDialog != null && mExplainDialog.isShowing()) {
+            mExplainDialog.dismiss();
+        }
+        mExplainDialog = null;
     }
 
     private SharedPreferences.OnSharedPreferenceChangeListener listenForPreferenceChanges(

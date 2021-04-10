@@ -16,6 +16,7 @@
 
 package com.android.bips.ui;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
 import android.content.Context;
@@ -56,6 +57,7 @@ public class AddPrintersFragment extends PreferenceFragment implements ServiceCo
     private SwitchPreference mP2pEnablePreference;
     private BuiltInPrintService mPrintService;
     private P2pPermissionManager mP2pPermissionManager;
+    private AlertDialog mPrintDialog;
 
     @Override
     public void onCreate(Bundle in) {
@@ -129,15 +131,29 @@ public class AddPrintersFragment extends PreferenceFragment implements ServiceCo
     }
 
     @Override
+    public void onDestroy() {
+        super.onDestroy();
+        // Bug#1206509, dismiss permission explain dialog if necessary.
+        if(mP2pPermissionManager != null) {
+            mP2pPermissionManager.dismissExplainDialog();
+        }
+
+        if (mPrintDialog != null && mPrintDialog.isShowing()) {
+            mPrintDialog.dismiss();
+        }
+        mPrintDialog = null;
+    }
+
+    @Override
     public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
         if (DEBUG) Log.d(TAG, "onServiceConnected");
         mPrintService = BuiltInPrintService.getInstance();
 
         mAddPrinterByIpPreference.setOnPreferenceClickListener(preference -> {
-            AlertDialog dialog = new AddManualPrinterDialog(getActivity(),
+            mPrintDialog = new AddManualPrinterDialog(getActivity(),
                     mPrintService.getManualDiscovery());
-            dialog.setOnDismissListener(d -> updateSavedPrinters());
-            dialog.show();
+            mPrintDialog.setOnDismissListener(d -> updateSavedPrinters());
+            mPrintDialog.show();
             return true;
         });
 
@@ -145,13 +161,18 @@ public class AddPrintersFragment extends PreferenceFragment implements ServiceCo
     }
 
     private void updateP2pPreferences() {
+        Activity activity = getActivity();
+        if (activity == null) {
+            return;
+        }
+
         // Only allow the user to find new P2P printers when enabled
         if (mP2pPermissionManager.isP2pEnabled()) {
             mP2pEnablePreference.setChecked(true);
             getPreferenceScreen().addPreference(mFindP2pPrintersPreference);
-            if (getActivity().getIntent().getBooleanExtra(EXTRA_FIX_P2P_PERMISSION, false)) {
+            if (activity.getIntent().getBooleanExtra(EXTRA_FIX_P2P_PERMISSION, false)) {
                 // If we were only here to enable P2P permissions, go back to the print now.
-                getActivity().finish();
+                activity.finish();
             }
         } else {
             mP2pEnablePreference.setChecked(false);
